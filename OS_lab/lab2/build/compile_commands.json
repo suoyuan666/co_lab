@@ -1,8 +1,0 @@
-[
-{
-  "directory": "/home/opensuse/codPjt/cpp/nepu_lab/build",
-  "command": "/usr/bin/clang++   -g -o CMakeFiles/lab.dir/lab.cpp.o -c /home/opensuse/codPjt/cpp/nepu_lab/lab.cpp",
-  "file": "/home/opensuse/codPjt/cpp/nepu_lab/lab.cpp",
-  "output": "CMakeFiles/lab.dir/lab.cpp.o"
-}
-]
