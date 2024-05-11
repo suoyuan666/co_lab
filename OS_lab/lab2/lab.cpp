@@ -1,43 +1,38 @@
 #include <algorithm>
-#include <cstdint>
+#include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <string>
 #include <vector>
 
-using reslist = std::vector<std::int16_t>;
+using reslist = std::vector<int>;
 
-constexpr std::int16_t RES_SIZE = 3;
-constexpr std::int16_t P_SZIE = 5;
+constexpr int RES_SIZE = 3;
+constexpr int P_SZIE = 5;
 
 class Process {
- private:
+private:
   reslist max;
   reslist need;
   reslist allocation;
   reslist request;
   bool finish{false};
 
- public:
+public:
   static std::unique_ptr<const reslist> total;
   static std::shared_ptr<reslist> available;
 
   Process()
-      : allocation(reslist(RES_SIZE)),
-        max(reslist(RES_SIZE)),
-        request(reslist(RES_SIZE)),
-        need(reslist(RES_SIZE)) {}
+      : allocation(reslist(RES_SIZE)), max(reslist(RES_SIZE)),
+        request(reslist(RES_SIZE)), need(reslist(RES_SIZE)) {}
 
   Process(reslist &&max, reslist &&allocation)
-      : allocation(std::move(allocation)),
-        max(std::move(max)),
+      : allocation(std::move(allocation)), max(std::move(max)),
         request(reslist(RES_SIZE)) {
     reslist tmp = reslist(RES_SIZE);
-    std::transform(
-        this->max.begin(), this->max.end(), this->allocation.begin(),
-        tmp.begin(),
-        [](std::int16_t a, std::int16_t b) -> std::int16_t { return a - b; });
+    std::transform(this->max.begin(), this->max.end(), this->allocation.begin(),
+                   tmp.begin(), [](int a, int b) { return a - b; });
     this->need = std::move(tmp);
   }
 
@@ -50,15 +45,14 @@ class Process {
     return str;
   }
 
-  auto set_request(reslist &&value) -> void {
-    this->request = std::move(value);
+  auto set_request(int value, int index) -> void { request[index] = value; }
+
+  auto set_allocation(int value, int index) -> void {
+    allocation[index] = value;
   }
-  auto set_request(std::int16_t value, std::int16_t index) -> void {
-    if (request.size() > index) {
-      request.at(index) = request.at(index) * 10 + value;
-    } else {
-      request[index] = value;
-    }
+
+  auto add_need(int value, int index) -> void {
+    need[index] = need[index] + value;
   }
 
   auto get_need() const -> reslist { return this->need; }
@@ -77,13 +71,12 @@ class Process {
 reslist tmp{10, 5, 7};
 std::unique_ptr<const reslist> Process::total =
     std::make_unique<reslist>(std::move(tmp));
-std::shared_ptr<reslist> Process::available = std::make_shared<reslist>(RES_SIZE);
+std::shared_ptr<reslist> Process::available =
+    std::make_shared<reslist>(RES_SIZE);
 
-bool ck4sec(Process pslist[P_SZIE], std::int16_t index);
-void ck4sec_core(Process pslist[],
-                 std::shared_ptr<std::vector<std::int16_t>> work,
-                 std::vector<bool> &finish,
-                 std::vector<std::int16_t> &safeSequence);
+bool ck4sec(Process pslist[P_SZIE], int index);
+void ck4sec_core(Process pslist[], std::shared_ptr<std::vector<int>> work,
+                 std::vector<bool> &finish, std::vector<int> &safeSequence);
 
 int main(void) {
   Process pslist[P_SZIE]{{{7, 5, 3}, {0, 1, 0}},
@@ -94,7 +87,7 @@ int main(void) {
 
   std::cout << "当前各个进程的需求和占有情况:\n";
   std::cout << "    work    need    alloc" << std::endl;
-  for (std::uint16_t i = 0; i < P_SZIE; ++i) {
+  for (int i = 0; i < P_SZIE; ++i) {
     std::cout << "P" << i << "  " << pslist[i].get_max2str() << "  "
               << pslist[i].get_need2str() << "  "
               << pslist[i].get_allocation2str() << '\n';
@@ -102,18 +95,18 @@ int main(void) {
 
   {
     reslist tmp(RES_SIZE);
-    for (std::int16_t i = 0; i < RES_SIZE; ++i) {
+    for (int i = 0; i < RES_SIZE; ++i) {
       for (auto &ps : pslist) {
         tmp.at(i) += ps.get_allocation().at(i);
       }
     }
     std::transform(Process::total->begin(), Process::total->end(), tmp.begin(),
                    Process::available->begin(),
-                   [](int16_t a, int16_t b) -> int16_t { return a - b; });
+                   [](int a, int b) { return a - b; });
   }
 
   std::cout << "请输入当前要请求资源的进程编号:" << std::endl;
-  std::int16_t pid{0};
+  int pid{0};
   {
     std::string tmp;
     char c;
@@ -128,14 +121,14 @@ int main(void) {
   std::cout << "现在输入该进程的请求序列(例: 1 2 3)" << std::endl;
 
   {
-    std::int16_t req;
+    int req;
     std::string tmp;
     char c;
 
     std::getline(std::cin, tmp);
     std::istringstream iss{tmp};
 
-    for (std::int16_t i = 0; i < RES_SIZE; ++i) {
+    for (int i = 0; i < RES_SIZE; ++i) {
       if (iss >> req) {
         pslist[pid].set_request(req, i);
       } else {
@@ -148,49 +141,48 @@ int main(void) {
 
   if (ck4sec(pslist, pid) == false) {
     std::cerr << "无安全序列" << std::endl;
+    return EXIT_FAILURE;
   }
-  return 0;
+  return EXIT_SUCCESS;
 }
 
-bool ck4sec(Process pslist[P_SZIE], std::int16_t index) {
-  reslist alloc_tmp(3);
-  reslist avlble_tmp(3);
-  std::vector<std::int16_t> pidlist;
-
-  for (std::int16_t i = 0; i < RES_SIZE; ++i) {
+bool ck4sec(Process pslist[P_SZIE], int index) {
+  for (int i = 0; i < RES_SIZE; ++i) {
     if (pslist[index].get_request().at(i) > pslist[index].get_need().at(i)) {
-      std::cerr << "请求的" << i << "号资源数量超过当前进程总共所需要的资源"
-                << std::endl;
+      std::cerr << "请求的" << i << "号资源数量超过当前进程总共所需要的资源\n";
       return false;
     }
     if (pslist[index].get_request().at(i) > Process::available->at(i)) {
-      std::cerr << "请求的" << i << "号资源数量超过当前系统空闲的资源"
-                << std::endl;
+      std::cerr << "请求的" << i << "号资源数量超过当前系统空闲的资源\n";
       return false;
     }
   }
-  std::vector<std::int16_t> safeSequence;
+
+  std::vector<int> safeSequence;
   std::vector<bool> finish(P_SZIE, false);
 
   for (int i = 0; i < RES_SIZE; i++) {
-    Process::available->at(i) -= pslist[index].get_request().at(i);
-    pslist[index].get_allocation().at(i) += pslist[index].get_request().at(i);
+    auto val = pslist[index].get_request().at(i);
+    Process::available->at(i) -= val;
+    pslist[index].set_allocation(val, i);
+    pslist[index].add_need(-val, i);
   }
 
-  auto work = Process::available;
-  ck4sec_core(pslist, work, finish, safeSequence);
+  // auto work = Process::available;
+  ck4sec_core(pslist, Process::available, finish, safeSequence);
 
   for (int i = 0; i < RES_SIZE; i++) {
-    Process::available->at(i) += pslist[index].get_request().at(i);
-    pslist[index].get_allocation().at(i) -= pslist[index].get_request().at(i);
+    auto val = pslist[index].get_request().at(i);
+    Process::available->at(i) += val;
+    pslist[index].set_allocation(-val, i);
+    pslist[index].add_need(val, i);
   }
+
   return true;
 }
 
-void ck4sec_core(Process pslist[],
-                 std::shared_ptr<std::vector<std::int16_t>> work,
-                 std::vector<bool> &finish,
-                 std::vector<std::int16_t> &safeSequence) {
+void ck4sec_core(Process pslist[], std::shared_ptr<std::vector<int>> work,
+                 std::vector<bool> &finish, std::vector<int> &safeSequence) {
   bool allFinished = true;
   for (int i = 0; i < P_SZIE; i++) {
     if (!finish[i]) {
