@@ -1,0 +1,19 @@
+---
+# 配置clang-tidy配置检测项，带'-'前缀的为disable对应的检测，否则为开启。这里主要是关闭一些用处不大，或者存在bug、假阳性的检查项
+Checks: '*,
+    -llvm-*,
+    -llvmlibc-*,
+    -fuchsia-*,
+    -cppcoreguidelines-*,
+    cppcoreguidelines-explicit-virtual-functions,
+    cppcoreguidelines-special-member-functions,
+    -cert-err58-cpp,
+    -cert-env33-c,
+    -cert-dcl37-c,
+    -cert-dcl51-cpp,
+    -readability-magic-numbers,
+    -readability-function-cognitive-complexity,
+    -misc-no-recursion,
+    -bugprone-exception-escape,
+'
+WarningsAsErrors: '*'
